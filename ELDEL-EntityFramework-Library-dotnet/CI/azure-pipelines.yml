@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+    - master
+    - release/*
+
+pool:
+  vmImage: 'windows-2019'
+
+variables:
+  - name: 'solutionName'
+    value: 'ELDEL-EntityFramework-Library'
+  - name: 'buildConfiguration'
+    value: 'Release'
+
+jobs:
+  - job: 'BuildTestAndPublish'
+    displayName: 'Build, test and publish NuGet package'
+    steps:
+
+    - task: NuGetCommand@2
+      displayName: 'NuGet restore .NET Class library'
+      inputs:
+        command: 'restore'
+        restoreSolution: '**/$(solutionName).sln'
+        feedsToUse: 'select'
+        #vstsFeed: 'eldel-feed'
+        vstsFeed: '86d632af-bb7b-4298-80c3-f06006ee435e/72292d11-112a-47fe-87fb-28f7b1432306'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'DotNet build .NET Class library'
+      inputs:
+        command: 'build'
+        projects: '**/$(solutionName).sln'
+        arguments: '--configuration $(buildConfiguration)'
+
+    - task: ArchiveFiles@2
+      displayName: 'Zip source code'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(solutionName).zip'
+        replaceExistingArchive: true
+        
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish zip file as artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(solutionName).zip'
+        ArtifactName: '$(solutionName)_drop'

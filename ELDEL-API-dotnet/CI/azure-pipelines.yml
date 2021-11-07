@@ -1,0 +1,53 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+  branches:
+    include:
+    - master
+    - release/*
+
+pool:
+  vmImage: 'windows-2019'
+
+variables:
+  solutionName: 'ELDEL-API'
+  buildConfiguration: 'Release'
+  date: none
+
+jobs:
+  - job: BuildTestAndPublish
+    displayName: 'Restore, build, and publish .NET solution'
+    steps:
+
+    - task: NuGetCommand@2
+      displayName: 'NuGet Restore .NET solution'
+      inputs:
+        command: 'restore'
+        restoreSolution: '**/$(solutionName).sln'
+        feedsToUse: 'select'
+        vstsFeed: '86d632af-bb7b-4298-80c3-f06006ee435e/72292d11-112a-47fe-87fb-28f7b1432306'  
+      
+    - task: DotNetCoreCLI@2
+      displayName: 'Build .NET solution'
+      inputs:
+        command: build
+        projects: '**/$(solutionName).sln'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish and zip .NET solution'
+      inputs:
+        command: 'publish'
+        publishWebProjects: False
+        projects: '**/$(solutionName).sln'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: True
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish build artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'eldel_api_drop'
